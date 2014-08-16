@@ -14,6 +14,7 @@
 #include "src/init_soar.cpp"
 #include "src/io.cpp"
 #include "src/lexer.cpp"
+#include "src/lexeme.cpp"
 #include "src/mem.cpp"
 #include "src/osupport.cpp"
 #include "src/output_manager.cpp"

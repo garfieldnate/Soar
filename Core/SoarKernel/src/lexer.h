@@ -18,6 +18,7 @@
 #include <string>
 #include "stdint.h"
 #include "agent.h"
+#include "indexed_input_buffer.h"
 
 /**
  * Types of tokens read by the lexer
@@ -166,6 +167,7 @@ namespace soar
          * The second-to-last character read from the input string.
          */
         int                 prev_char;
+        indexed_input_buffer indexed_input;
         const char*         production_string;
         //0 means top level, no left parens seen
         int                 parentheses_level;
@@ -190,8 +192,8 @@ namespace soar
          * Get the next character from the current input file
          * and put it into the member variable current_char.
          * Set current_char to EOF if the input string is null
-         * or '\0' is found. The old value of current_char is
-         * stored in prev_char.
+         * or the end of the string is reached. The old value
+         * of current_char is stored in prev_char.
          */
         void get_next_char ();
         void consume_whitespace_and_comments();

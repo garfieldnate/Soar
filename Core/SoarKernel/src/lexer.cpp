@@ -32,25 +32,12 @@ bool Lexer::number_starters[256];
 bool Lexer::initialized = init();
 
 void Lexer::get_next_char () {
-    char *s;
-
-    if(current_char == EOF) {
-        prev_char = EOF;
-        return;
-    }
-
-    if (production_string == NULL) {
-        current_char = EOF;
-        prev_char = EOF;
-        return;
-    }
     prev_char = current_char;
-    current_char = *production_string++;
-    if (current_char == '\0')
-    {
-        current_char = EOF;
+    if(indexed_input.bad() || indexed_input.eof()) {
         return;
     }
+    indexed_input.increment();
+    current_char = indexed_input.get();
 }
 
 /* ======================================================================
@@ -68,25 +55,25 @@ inline void Lexer::record_position_of_start_of_lexeme()
 
 inline void Lexer::store_and_advance()
 {
-    current_lexeme.lex_string.append(1, char(current_char));
+    current_lexeme.lex_string.append(1, char(indexed_input.get()));
     get_next_char();
 }
 
 void Lexer::read_constituent_string () {
-  while ((current_char!=EOF) &&
-         constituent_char[static_cast<unsigned char>(current_char)])
+  while (!indexed_input.eof() &&
+         constituent_char[static_cast<unsigned char>(indexed_input.get())])
     store_and_advance();
 }
 
 void Lexer::read_rest_of_floating_point_number () {
-  /* --- at entry, current_char=="."; we read the "." and rest of number --- */
+  /* --- at entry, indexed_input.get()=="."; we read the "." and rest of number --- */
   store_and_advance();
-  while (isdigit(current_char)) store_and_advance(); /* string of digits */
-  if ((current_char=='e')||(current_char=='E')) {
+  while (isdigit(indexed_input.get())) store_and_advance(); /* string of digits */
+  if ((indexed_input.get()=='e')||(indexed_input.get()=='E')) {
     store_and_advance();                             /* E */
-    if ((current_char=='+')||(current_char=='-'))
+    if ((indexed_input.get()=='+')||(indexed_input.get()=='-'))
       store_and_advance();                       /* optional leading + or - */
-    while (isdigit(current_char)) store_and_advance(); /* string of digits */
+    while (isdigit(indexed_input.get())) store_and_advance(); /* string of digits */
   }
 }
 
@@ -299,10 +286,12 @@ void Lexer::lex_period () {
 
   store_and_advance();
 
-  if (!float_disallowed && isdigit(current_char)) {
+  if (!float_disallowed && isdigit(current_char))
+  {
     read_rest_of_floating_point_number();
   }
-  if (current_lexeme.length()==1) {
+  if (current_lexeme.length()==1)
+  {
     current_lexeme.type = PERIOD_LEXEME;
     return;
   }
@@ -318,7 +307,7 @@ void Lexer::lex_plus () {
   read_constituent_string();
   /* --- if we stopped at '.', it might be a floating-point number, so be
      careful to check for this case --- */
-  if (current_char=='.') {
+  if (indexed_input.get()=='.') {
     could_be_floating_point = true;
     for (i=1; i<current_lexeme.length(); i++)
       if (! isdigit(current_lexeme.lex_string[i])) could_be_floating_point = false;
@@ -337,7 +326,7 @@ void Lexer::lex_minus () {
   read_constituent_string();
   /* --- if we stopped at '.', it might be a floating-point number, so be
      careful to check for this case --- */
-  if (current_char=='.') {
+  if (indexed_input.get()=='.') {
     could_be_floating_point = true;
     for (i=1; i<current_lexeme.length(); i++)
       if (! isdigit(current_lexeme.lex_string[i])) could_be_floating_point = false;
@@ -358,7 +347,7 @@ void Lexer::lex_digit () {
   read_constituent_string();
   /* --- if we stopped at '.', it might be a floating-point number, so be
      careful to check for this case --- */
-  if (current_char=='.') {
+  if (indexed_input.get()=='.') {
     could_be_floating_point = true;
     for (i=1; i<current_lexeme.length(); i++)
       if (! isdigit(current_lexeme.lex_string[i])) could_be_floating_point = false;
@@ -381,7 +370,7 @@ void Lexer::lex_vbar () {
   current_lexeme.type = STR_CONSTANT_LEXEME;
   get_next_char();
   do {
-    if (current_char==EOF) {
+    if (indexed_input.eof()) {
       print (thisAgent, "Error:  opening '|' without closing '|'\n");
       print_location_of_most_recent_lexeme();
       /* BUGBUG if reading from top level, don't want to signal EOF */
@@ -389,10 +378,10 @@ void Lexer::lex_vbar () {
       current_lexeme.lex_string = std::string(1, EOF);
       return;
     }
-    if (current_char=='\\') {
+    if (indexed_input.get()=='\\') {
       get_next_char();
       store_and_advance();
-    } else if (current_char=='|') {
+    } else if (indexed_input.get()=='|') {
       get_next_char();
       break;
     } else {
@@ -405,7 +394,7 @@ void Lexer::lex_quote () {
   current_lexeme.type = QUOTED_STRING_LEXEME;
   get_next_char();
   do {
-    if (current_char==EOF) {
+    if (indexed_input.eof()) {
       print (thisAgent, "Error:  opening '\"' without closing '\"'\n");
       print_location_of_most_recent_lexeme();
       /* BUGBUG if reading from top level, don't want to signal EOF */
@@ -413,10 +402,10 @@ void Lexer::lex_quote () {
       current_lexeme.lex_string = std::string(1, EOF);
       return;
     }
-    if (current_char=='\\') {
+    if (indexed_input.get()=='\\') {
       get_next_char();
       store_and_advance();
-    } else if (current_char=='"') {
+    } else if (indexed_input.get()=='"') {
       get_next_char();
       break;
     } else {
@@ -440,8 +429,8 @@ void Lexer::get_lexeme () {
 
   // dispatch to lexer routine by first character in lexeme
   record_position_of_start_of_lexeme();
-  if (current_char!=EOF)
-    (this->*lexer_routines[static_cast<unsigned char>(current_char)])();
+  if (!indexed_input.eof())
+    (this->*lexer_routines[static_cast<unsigned char>(indexed_input.get())])();
   else
     lex_eof();
 }
@@ -450,23 +439,23 @@ void Lexer::consume_whitespace_and_comments()
 {
   // loop until whitespace and comments are gone
   while (true) {
-    if (current_char==EOF) break;
-    if (whitespace[static_cast<unsigned char>(current_char)]) {
+    if (indexed_input.eof()) break;
+    if (whitespace[static_cast<unsigned char>(indexed_input.get())]) {
       get_next_char();
       continue;
     }
 
     //skip the semi-colon, forces newline in TCL
-    if (current_char==';') {
+    if (indexed_input.get()==';') {
       get_next_char();
       continue;
     }
     //hash is end-of-line comment; read to the end
-    if (current_char=='#') {
-      while ((current_char!='\n') &&
-             (current_char!=EOF))
+    if (indexed_input.get()=='#') {
+      while ((indexed_input.get()!='\n') &&
+             (!indexed_input.eof()))
         get_next_char();
-      if (current_char!=EOF) get_next_char();
+      if (!indexed_input.eof()) get_next_char();
       continue;
     }
     //if no whitespace or comments found, break out of the loop
@@ -734,6 +723,7 @@ void Lexer::determine_possible_symbol_types_for_string (const char *s,
 Lexer::Lexer(agent* agent, const char* string)
 {
     thisAgent = agent;
+    indexed_input = indexed_input_buffer(string);
     production_string = string;
     current_char = ' ';
     parentheses_level = 0;

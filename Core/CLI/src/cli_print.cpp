@@ -520,7 +520,7 @@ list* read_pattern_and_get_matching_wmes(agent* thisAgent, const char* pattern)
     lexer.get_lexeme();
     if (lexer.current_lexeme.type!=L_PAREN_LEXEME)
     {
-        print(thisAgent,  "Expected '(' to begin wme pattern not string '%s' or char '%c'\n", lexer.current_lexeme.string(), lexer.current_char);
+        print(thisAgent,  "Expected '(' to begin wme pattern not string '%s' or char '%c'\n", lexer.current_lexeme.string(), lexer.get_current_char());
         return NIL;
     }
     parentheses_level = lexer.current_parentheses_level();

@@ -37,7 +37,13 @@ void Lexer::get_next_char () {
         return;
     }
     indexed_input.increment();
-    current_char = indexed_input.get();
+}
+
+int Lexer::get_current_char () {
+    if(indexed_input.bad() || indexed_input.eof()) {
+        return EOF;
+    }
+    return indexed_input.get();
 }
 
 /* ======================================================================
@@ -286,7 +292,7 @@ void Lexer::lex_period () {
 
   store_and_advance();
 
-  if (!float_disallowed && isdigit(current_char))
+  if (!float_disallowed && isdigit(get_current_char()))
   {
     read_rest_of_floating_point_number();
   }
@@ -724,8 +730,6 @@ Lexer::Lexer(agent* agent, const char* string)
 {
     thisAgent = agent;
     indexed_input = indexed_input_buffer(string);
-    production_string = string;
-    current_char = ' ';
     parentheses_level = 0;
     allow_ids = true;
 

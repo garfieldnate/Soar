@@ -156,19 +156,21 @@ namespace soar
 
         /**
          * The last character read from the input string.
+         * @return The last character read from the input string
          */
-        int current_char;
+        int get_current_char ();
+
         /**
          * The last lexeme read from the input string (set by get_lexeme()).
          */
         Lexeme current_lexeme;
+
     private:
         /**
          * The second-to-last character read from the input string.
          */
         int                 prev_char;
         indexed_input_buffer indexed_input;
-        const char*         production_string;
         //0 means top level, no left parens seen
         int                 parentheses_level;
         bool                allow_ids;

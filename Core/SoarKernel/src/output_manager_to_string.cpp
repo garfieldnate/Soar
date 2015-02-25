@@ -1143,9 +1143,6 @@ void Output_Manager::print_current_lexeme(TraceMode mode, soar::Lexer* lexer)
         case QUOTED_STRING_LEXEME:
             lex_type_string = "QUOTED_STRING_LEXEME";
             break;
-        case DOLLAR_STRING_LEXEME:
-            lex_type_string = "DOLLAR_STRING_LEXEME";
-            break;
         case NULL_LEXEME:
             lex_type_string = "NULL_LEXEME";
             break;

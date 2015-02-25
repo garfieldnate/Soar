@@ -53,7 +53,6 @@ enum lexer_token_type {
   COMMA_LEXEME,                      /**< "," */
   PERIOD_LEXEME,                     /**< "." */
   QUOTED_STRING_LEXEME,              /**< string in double quotes */
-  DOLLAR_STRING_LEXEME,              /**< string for shell escape */
   NULL_LEXEME                        /**< Initial value */
 };
 

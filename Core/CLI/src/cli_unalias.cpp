@@ -15,11 +15,12 @@
 #include "cli_Aliases.h"
 
 #include "sml_Names.h"
+#include "token.h"
 
 using namespace cli;
 using namespace sml;
 
-bool CommandLineInterface::DoUnalias(std::vector<std::string>& argv)
+bool CommandLineInterface::DoUnalias(std::vector<soar::Token>& argv)
 {
     m_Parser.GetAliases().SetAlias(argv);
     return true;

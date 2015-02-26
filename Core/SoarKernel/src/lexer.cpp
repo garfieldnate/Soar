@@ -32,7 +32,7 @@ bool Lexer::number_starters[256];
 bool Lexer::initialized = init();
 
 void Lexer::get_next_char () {
-    prev_char = current_char;
+    prev_char = get_current_char();
     if(indexed_input.bad() || indexed_input.eof()) {
         return;
     }

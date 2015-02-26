@@ -9,6 +9,9 @@
  */
 #ifndef INDEXED_INPUT_BUFFER_H
 #define INDEXED_INPUT_BUFFER_H
+
+#include "text_location.h"
+
 namespace soar {
     class indexed_input_buffer
     {
@@ -97,6 +100,16 @@ namespace soar {
             int get_offset() const
             {
                 return offset;
+            }
+
+            /**
+             * Returns the current text location (including line
+             * and offset).
+             * @return the current location.
+             */
+            text_location get_location() const
+            {
+                return text_location(get_line(), get_offset());
             }
 
             /**

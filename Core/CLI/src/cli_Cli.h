@@ -3,6 +3,7 @@
 
 #include <bitset>
 #include <stdint.h>
+#include "token.h"
 
 typedef uint64_t epmem_time_id;
 //#enum ni_mode;
@@ -35,7 +36,7 @@ namespace cli
              *        Ex: { "stop", "stop-soar" }
              *        Null to list.
              */
-            virtual bool DoAlias(std::vector< std::string >* argv = 0) = 0;
+            virtual bool DoAlias(std::vector< soar::Token >* argv = 0) = 0;
 
             virtual bool DoAllocate(const std::string& pool, int blocks) = 0;
 
@@ -91,7 +92,7 @@ namespace cli
              */
             virtual bool DoCLog(const eLogMode mode = LOG_QUERY, const std::string* pFilename = 0, const std::string* pToAdd = 0, bool silent = false) = 0;
 
-            virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< std::string >& argv) = 0;
+            virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< soar::Token >& argv) = 0;
 
             /**
              * @brief debug command
@@ -634,7 +635,7 @@ namespace cli
              * @brief time command
              * @param argv The command line with the time arg removed
              */
-            virtual bool DoTime(std::vector<std::string>& argv) = 0;
+            virtual bool DoTime(std::vector<soar::Token>& argv) = 0;
 
             /**
              * @brief timers command
@@ -643,7 +644,7 @@ namespace cli
              */
             virtual bool DoTimers(bool* pSetting = 0) = 0;
 
-            virtual bool DoUnalias(std::vector<std::string>& argv) = 0;
+            virtual bool DoUnalias(std::vector<soar::Token>& argv) = 0;
 
             /**
              * @brief verbose command

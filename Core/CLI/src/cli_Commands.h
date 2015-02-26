@@ -1,15 +1,27 @@
 #ifndef CLI_COMMANDS_H
 #define CLI_COMMANDS_H
 
+#include <string>
 #include "cli_Parser.h"
 #include "misc.h"
 #include "cli_Options.h"
 #include "kernel.h"
 #include "sml_Events.h"
 #include "cli_Cli.h"
+#include "token.h"
 
 namespace cli
 {
+    std::vector< std::string > tokens_to_strings(std::vector< soar::Token > tokens)
+    {
+        std::vector< std::string > strings;
+        for (std::vector< soar::Token >::iterator iter = tokens.begin(); iter != tokens.end(); ++iter)
+        {
+            strings.push_back(iter->get_string());
+        }
+        return strings;
+    }
+
     class AddWMECommand : public cli::ParserCommand
     {
         public:
@@ -25,35 +37,38 @@ namespace cli
                 return "Syntax: add-wme id [^]attribute value [+]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() < 4)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() < 4)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                unsigned attributeIndex = (argv[2] == "^") ? 3 : 2;
+                unsigned attributeIndex = (command_strings[2] == "^") ? 3 : 2;
 
-                if (argv.size() < (attributeIndex + 2))
+                if (command_strings.size() < (attributeIndex + 2))
                 {
                     return cli.SetError(GetSyntax());
                 }
-                if (argv.size() > (attributeIndex + 3))
+                if (command_strings.size() > (attributeIndex + 3))
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 bool acceptable = false;
-                if (argv.size() > (attributeIndex + 2))
+                if (command_strings.size() > (attributeIndex + 2))
                 {
-                    if (argv[attributeIndex + 2] != "+")
+                    if (command_strings[attributeIndex + 2] != "+")
                     {
                         return cli.SetError(GetSyntax());
                     }
                     acceptable = true;
                 }
 
-                return cli.DoAddWME(argv[1], argv[attributeIndex], argv[attributeIndex + 1], acceptable);
+                return cli.DoAddWME(command_strings[1],
+                    command_strings[attributeIndex],
+                    command_strings[attributeIndex + 1], acceptable);
             }
 
         private:
@@ -76,7 +91,7 @@ namespace cli
                 return "Syntax: alias [name [cmd [args]]]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
                 if (argv.size() == 1)
                 {
@@ -108,20 +123,21 @@ namespace cli
                 return "Syntax: allocate [pool blocks]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() == 1)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() == 1)
                 {
                     return cli.DoAllocate(std::string(), 0);
                 }
 
-                if (argv.size() != 3)
+                if (command_strings.size() != 3)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 int blocks = 0;
-                if (!from_string(blocks, argv[2]))
+                if (!from_string(blocks, command_strings[2]))
                 {
                     return cli.SetError("Expected an integer (number of blocks).");
                 }
@@ -131,7 +147,7 @@ namespace cli
                     return cli.SetError("Expected a positive integer (number of blocks).");
                 }
 
-                return cli.DoAllocate(argv[1], blocks);
+                return cli.DoAllocate(command_strings[1], blocks);
             }
 
         private:
@@ -157,8 +173,9 @@ namespace cli
                     "capture-input --close";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -175,7 +192,7 @@ namespace cli
                 bool autoflush = false;
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError());
                     }
@@ -226,17 +243,18 @@ namespace cli
                 return "Syntax: cd [directory]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // Only takes one optional argument, the directory to change into
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError("Only one argument (a directory) is allowed. Paths with spaces should be enclosed in quotes.");
                 }
 
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
-                    return cli.DoCD(&(argv[1]));
+                    return cli.DoCD(&(command_strings[1]));
                 }
                 return cli.DoCD();
             }
@@ -263,8 +281,9 @@ namespace cli
                     "chunk-name-format [-sl] -c [count]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -285,7 +304,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError());
                     }
@@ -357,8 +376,9 @@ namespace cli
                 return "Syntax: clog -[Ae] filename\nclog -a string\nclog [-cdoq]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -376,7 +396,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -418,14 +438,14 @@ namespace cli
                         }
 
                         // move to the first non-option arg
-                        std::vector<std::string>::iterator iter = argv.begin();
+                        std::vector<std::string>::iterator iter = command_strings.begin();
                         for (int i = 0; i < (opt.GetArgument() - opt.GetNonOptionArguments()); ++i)
                         {
                             ++iter;
                         }
 
                         // combine all args
-                        while (iter != argv.end())
+                        while (iter != command_strings.end())
                         {
                             toAdd += *iter;
                             toAdd += ' ';
@@ -443,7 +463,7 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoCLog(mode, &argv[1]);
+                            return cli.DoCLog(mode, &command_strings[1]);
                         }
                         break; // no args case handled below
 
@@ -458,7 +478,7 @@ namespace cli
                         {
                             return cli.SetError("Please provide a filename.");
                         }
-                        return cli.DoCLog(mode, &argv[1]);
+                        return cli.DoCLog(mode, &command_strings[1]);
 
                     default:
                     case Cli::LOG_CLOSE:
@@ -496,18 +516,19 @@ namespace cli
                 return "Syntax: cli extension-name command [args]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() < 3)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() < 3)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                std::string concat_message(argv[1]);
-                for (std::vector<int>::size_type i = 2; i < argv.size(); ++i)
+                std::string concat_message(command_strings[1]);
+                for (std::vector<int>::size_type i = 2; i < command_strings.size(); ++i)
                 {
                     concat_message += ' ' ;
-                    concat_message += argv[i] ;
+                    concat_message += command_strings[i] ;
                 }
                 return cli.DoCLIMessage(concat_message);
             }
@@ -532,7 +553,7 @@ namespace cli
                 return "Syntax: command-to-file [-a] filename command [args]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
                 // Not going to use normal option parsing in this case because I do not want to disturb the other command on the line
                 if (argv.size() < 3)
@@ -544,14 +565,14 @@ namespace cli
                 // Unless append option is present, which is handled later.
                 int startOfCommand = 2;
                 Cli::eLogMode mode = Cli::LOG_NEW;
-                std::string filename = argv[1];
+                std::string filename = argv[1].get_string();
 
                 // Parse out option.
                 for (int i = 1; i < 3; ++i)
                 {
                     bool append = false;
                     bool unrecognized = false;
-                    std::string arg = argv[i];
+                    std::string arg = argv[i].get_string();
                     if (arg[0] == '-')
                     {
                         if (arg[1] == 'a')
@@ -595,7 +616,7 @@ namespace cli
                         // Re-set filename if necessary
                         if (i == 1)
                         {
-                            filename = argv[2];
+                            filename = argv[2].get_string();
                         }
 
                         break;
@@ -603,13 +624,13 @@ namespace cli
                 }
 
                 // Restructure argv
-                std::vector<std::string> newArgv;
+                std::vector<soar::Token> new_commands;
                 for (std::vector<int>::size_type i = startOfCommand; i < argv.size(); ++i)
                 {
-                    newArgv.push_back(argv[i]);
+                    new_commands.push_back(argv[i]);
                 }
 
-                return cli.DoCommandToFile(mode, filename, newArgv);
+                return cli.DoCommandToFile(mode, filename, new_commands);
             }
 
         private:
@@ -632,16 +653,17 @@ namespace cli
                 return "Syntax: debug [command] [arguments]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() == 1)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() == 1)
                 {
                     return cli.DoDebug();    // list all
                 }
 
-                argv.erase(argv.begin());
+                command_strings.erase(command_strings.begin());
 
-                return cli.DoDebug(&argv);
+                return cli.DoDebug(&command_strings);
 
             }
         private:
@@ -664,20 +686,21 @@ namespace cli
                 return "Syntax: default-wme-depth [depth]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (query)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Depth argument must be positive.");
@@ -707,7 +730,7 @@ namespace cli
                 return "Syntax: dirs";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoDirs();
             }
@@ -732,8 +755,9 @@ namespace cli
                 return "Syntax: echo [--nonewline] [string]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -745,7 +769,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError());
                     }
@@ -766,10 +790,10 @@ namespace cli
                 // remove the -n arg
                 if (!echoNewline)
                 {
-                    argv.erase(++argv.begin());
+                    command_strings.erase(++command_strings.begin());
                 }
 
-                return cli.DoEcho(argv, echoNewline);
+                return cli.DoEcho(command_strings, echoNewline);
             }
 
         private:
@@ -792,8 +816,9 @@ namespace cli
                 return "Syntax: echo-commands [-yn]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -807,7 +832,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -858,14 +883,15 @@ namespace cli
                 return "Syntax: edit-production production_name";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() != 2)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() != 2)
                 {
                     return cli.SetError("Need to include the name of the production to edit.");
                 }
 
-                return cli.DoEditProduction(argv[1]);
+                return cli.DoEditProduction(command_strings[1]);
             }
 
         private:
@@ -888,8 +914,9 @@ namespace cli
                 return "Syntax: epmem [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -913,7 +940,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -958,7 +985,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoEpMem(option, &(argv[2]));
+                        return cli.DoEpMem(option, &(command_strings[2]));
 
                     case 'g':
                         // case: get requires one non-option argument
@@ -968,7 +995,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoEpMem(option, &(argv[2]));
+                        return cli.DoEpMem(option, &(command_strings[2]));
                     }
 
                     case 'p':
@@ -979,7 +1006,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        std::string temp_str(argv[2]);
+                        std::string temp_str(command_strings[2]);
                         epmem_time_id memory_id;
 
                         if (!from_string(memory_id, temp_str))
@@ -998,7 +1025,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoEpMem('s', &(argv[2]), &(argv[3]));
+                        return cli.DoEpMem('s', &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 'S':
@@ -1014,7 +1041,7 @@ namespace cli
                             return cli.DoEpMem(option);
                         }
 
-                        return cli.DoEpMem(option, &(argv[2]));
+                        return cli.DoEpMem(option, &(command_strings[2]));
                     }
 
                     case 't':
@@ -1030,7 +1057,7 @@ namespace cli
                             return cli.DoEpMem(option);
                         }
 
-                        return cli.DoEpMem(option, &(argv[2]));
+                        return cli.DoEpMem(option, &(command_strings[2]));
                     }
 
                     case 'v':
@@ -1041,7 +1068,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        std::string temp_str(argv[2]);
+                        std::string temp_str(command_strings[2]);
                         epmem_time_id memory_id;
 
                         if (!from_string(memory_id, temp_str))
@@ -1054,7 +1081,7 @@ namespace cli
                 }
 
                 // bad: no option, but more than one argument
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
                     return cli.SetError("Too many arguments, check syntax.");
                 }
@@ -1083,8 +1110,9 @@ namespace cli
                 return "Syntax: excise production_name\nexcise options";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1102,7 +1130,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -1159,7 +1187,7 @@ namespace cli
                 }
 
                 // Pass the production to the cli.DoExcise function
-                return cli.DoExcise(options, &(argv[opt.GetArgument() - opt.GetNonOptionArguments()]));
+                return cli.DoExcise(options, &(command_strings[opt.GetArgument() - opt.GetNonOptionArguments()]));
             }
 
         private:
@@ -1182,8 +1210,9 @@ namespace cli
                 return "Syntax: explain-backtraces [options] [prod_name]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1196,7 +1225,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -1237,7 +1266,7 @@ namespace cli
                 // we have a production
                 if (opt.GetNonOptionArguments() == 1)
                 {
-                    return cli.DoExplainBacktraces(&argv[opt.GetArgument() - opt.GetNonOptionArguments()], condition);
+                    return cli.DoExplainBacktraces(&command_strings[opt.GetArgument() - opt.GetNonOptionArguments()], condition);
                 }
 
                 // query
@@ -1264,8 +1293,9 @@ namespace cli
                 return "Syntax: firing-counts [n]\nfiring-counts production_name";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // The number to list defaults to -1 (list all)
                 int numberToList = -1;
 
@@ -1273,15 +1303,15 @@ namespace cli
                 std::string* pProduction = 0;
 
                 // no more than 1 arg
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
                     // one argument, figure out if it is a non-negative integer or a production
-                    if (from_string(numberToList, argv[1]))
+                    if (from_string(numberToList, command_strings[1]))
                     {
                         if (numberToList < 0)
                         {
@@ -1294,7 +1324,7 @@ namespace cli
                         numberToList = -1;
 
                         // non-integer argument, hopfully a production
-                        pProduction = &(argv[1]);
+                        pProduction = &(command_strings[1]);
                     }
                 }
 
@@ -1321,7 +1351,7 @@ namespace cli
                 return "Syntax: gds-print";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoGDSPrint();
             }
@@ -1346,19 +1376,20 @@ namespace cli
                 return "Syntax: gp { production_body }";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // One argument
-                if (argv.size() < 2)
+                if (command_strings.size() < 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                return cli.DoGP(argv[1]);
+                return cli.DoGP(command_strings[1]);
             }
 
         private:
@@ -1381,20 +1412,21 @@ namespace cli
                 return "Syntax: gp-max [value]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = -1;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n < 0)
                     {
                         return cli.SetError("Value must be non-negative.");
@@ -1424,9 +1456,10 @@ namespace cli
                 return "Syntax: help [command]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                return cli.DoHelp(argv);
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                return cli.DoHelp(command_strings);
             }
 
         private:
@@ -1456,8 +1489,9 @@ namespace cli
                     "indifferent-selection [-a] [setting]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1490,7 +1524,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -1539,7 +1573,7 @@ namespace cli
                             return cli.DoIndifferentSelection(option);
                         }
 
-                        return cli.DoIndifferentSelection(option, &(argv[2]));
+                        return cli.DoIndifferentSelection(option, &(command_strings[2]));
 
                     case 'a':
                         // case: auto reduction control can do zero or one non-option arguments
@@ -1553,7 +1587,7 @@ namespace cli
                             return cli.DoIndifferentSelection(option);
                         }
 
-                        return cli.DoIndifferentSelection(option, &(argv[2]));
+                        return cli.DoIndifferentSelection(option, &(command_strings[2]));
 
                     case 'p':
                         // case: reduction policy requires one or two non-option arguments
@@ -1564,10 +1598,10 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoIndifferentSelection(option, &(argv[2]));
+                            return cli.DoIndifferentSelection(option, &(command_strings[2]));
                         }
 
-                        return cli.DoIndifferentSelection(option, &(argv[2]), &(argv[3]));
+                        return cli.DoIndifferentSelection(option, &(command_strings[2]), &(command_strings[3]));
 
                     case 'r':
                         // case: reduction policy rate requires two or three arguments
@@ -1578,10 +1612,10 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 2)
                         {
-                            return cli.DoIndifferentSelection(option, &(argv[2]), &(argv[3]));
+                            return cli.DoIndifferentSelection(option, &(command_strings[2]), &(command_strings[3]));
                         }
 
-                        return cli.DoIndifferentSelection(option, &(argv[2]), &(argv[3]), &(argv[4]));
+                        return cli.DoIndifferentSelection(option, &(command_strings[2]), &(command_strings[3]), &(command_strings[4]));
 
                     case 's':
                         // case: stats takes no parameters
@@ -1594,7 +1628,7 @@ namespace cli
                 }
 
                 // bad: no option, but more than one argument
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
                     return cli.SetError("Too many args.");
                 }
@@ -1623,7 +1657,7 @@ namespace cli
                 return "Syntax: init-soar";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoInitSoar();
             }
@@ -1648,7 +1682,7 @@ namespace cli
                 return "Syntax: internal-symbols";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoInternalSymbols();
             }
@@ -1673,8 +1707,9 @@ namespace cli
                 return "Syntax: learn [-abdeElonNpP]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1698,7 +1733,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -1775,21 +1810,22 @@ namespace cli
                 return "Syntax: load-library [library_name] [arguments]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // command-name library-name [library-args ...]
 
-                if (argv.size() < 2)
+                if (command_strings.size() < 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // strip the command name, combine the rest
-                std::string libraryCommand(argv[1]);
-                for (std::string::size_type i = 2; i < argv.size(); ++i)
+                std::string libraryCommand(command_strings[1]);
+                for (std::string::size_type i = 2; i < command_strings.size(); ++i)
                 {
                     libraryCommand += " ";
-                    libraryCommand += argv[i];
+                    libraryCommand += command_strings[i];
                 }
 
                 return cli.DoLoadLibrary(libraryCommand);
@@ -1815,10 +1851,11 @@ namespace cli
                 return "Syntax: ls";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // No arguments
-                if (argv.size() != 1)
+                if (command_strings.size() != 1)
                 {
                     return cli.SetError(GetSyntax());
                 }
@@ -1845,8 +1882,9 @@ namespace cli
                 return "Syntax: matches [options] production_name\nmatches [options] -[a|r]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1864,7 +1902,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -1907,7 +1945,7 @@ namespace cli
                     {
                         return cli.SetError(GetSyntax());
                     }
-                    return cli.DoMatches(Cli::MATCHES_PRODUCTION, detail, &argv[opt.GetArgument() - opt.GetNonOptionArguments()]);
+                    return cli.DoMatches(Cli::MATCHES_PRODUCTION, detail, &command_strings[opt.GetArgument() - opt.GetNonOptionArguments()]);
                 }
 
                 return cli.DoMatches(mode, detail);
@@ -1933,20 +1971,21 @@ namespace cli
                 return "Syntax: max-chunks [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Expected positive integer.");
@@ -1976,8 +2015,9 @@ namespace cli
                 return "Syntax: max-dc-time [--seconds] [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -1994,7 +2034,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2029,7 +2069,7 @@ namespace cli
                     {
                         double nsec = 0;
 
-                        if (!from_string(nsec, argv[index]))
+                        if (!from_string(nsec, command_strings[index]))
                         {
                             return cli.SetError(GetSyntax());
                         }
@@ -2038,7 +2078,7 @@ namespace cli
                     }
                     else
                     {
-                        from_string(n, argv[index]);
+                        from_string(n, command_strings[index]);
                     }
 
                     if (n <= 0)
@@ -2070,20 +2110,21 @@ namespace cli
                 return "Syntax: max-elaborations [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Expected positive integer.");
@@ -2113,20 +2154,21 @@ namespace cli
                 return "Syntax: max-goal-depth [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Expected positive integer.");
@@ -2156,20 +2198,21 @@ namespace cli
                 return "Syntax: max-memory-usage [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Expected positive integer.");
@@ -2199,20 +2242,21 @@ namespace cli
                 return "Syntax: max-nil-output-cycles [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // n defaults to 0 (print current value)
                 int n = 0;
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 // one argument, figure out if it is a positive integer
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    from_string(n, argv[1]);
+                    from_string(n, command_strings[1]);
                     if (n <= 0)
                     {
                         return cli.SetError("Expected positive integer.");
@@ -2242,8 +2286,9 @@ namespace cli
                 return "Syntax: memories [options] [number]\nmemories production_name";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2259,7 +2304,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2300,7 +2345,7 @@ namespace cli
                 if (opt.GetNonOptionArguments() == 1)
                 {
                     int optind = opt.GetArgument() - opt.GetNonOptionArguments();
-                    if (from_string(n, argv[optind]))
+                    if (from_string(n, command_strings[optind]))
                     {
                         // number
                         if (n <= 0)
@@ -2315,7 +2360,7 @@ namespace cli
                         {
                             return cli.SetError("Do not specify production type when specifying a production name.");
                         }
-                        return cli.DoMemories(options, 0, &argv[optind]);
+                        return cli.DoMemories(options, 0, &command_strings[optind]);
                     }
                 }
 
@@ -2349,28 +2394,29 @@ namespace cli
                 return "Syntax: multi-attributes [symbol [n]]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // No more than three arguments
-                if (argv.size() > 3)
+                if (command_strings.size() > 3)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 int n = 0;
                 // If we have 3 arguments, third one is an integer
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
-                    if (!from_string(n, argv[2]) || (n <= 0))
+                    if (!from_string(n, command_strings[2]) || (n <= 0))
                     {
                         return cli.SetError("Expected non-negative integer.");
                     }
                 }
 
                 // If we have two arguments, second arg is an attribute/identifer/whatever
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
-                    return cli.DoMultiAttributes(&argv[1], n);
+                    return cli.DoMultiAttributes(&command_strings[1], n);
                 }
 
                 return cli.DoMultiAttributes();
@@ -2396,8 +2442,9 @@ namespace cli
                 return "Syntax: numeric-indifferent-mode [-as]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2412,7 +2459,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2464,21 +2511,22 @@ namespace cli
                 return "Syntax: o-support-mode [n]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() > 2)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 int mode = -1;
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    if (!isdigit(argv[1][0]))
+                    if (!isdigit(command_strings[1][0]))
                     {
                         return cli.SetError("Expected an integer 0, 2, 3, or 4.");
                     }
-                    from_string(mode, argv[1]);
+                    from_string(mode, command_strings[1]);
                     if (mode < 0 || mode > 4 || mode == 1)
                     {
                         return cli.SetError("Expected an integer 0, 2, 3, or 4.");
@@ -2508,8 +2556,9 @@ namespace cli
                 return "Syntax: pbreak [-cps] production_name";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2523,7 +2572,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2544,16 +2593,16 @@ namespace cli
                 {
                     case 'c':
                     case 's':
-                        if (argv.size() != 3)
+                        if (command_strings.size() != 3)
                         {
                             return cli.SetError("pbreak --set/--clear takes exactly one argument.");
                         }
 
                         // case: clear the interrupt flag on the production
-                        return cli.DoPbreak(option, argv[2]);
+                        return cli.DoPbreak(option, command_strings[2]);
 
                     case 'p':
-                        if (argv.size() != 2)
+                        if (command_strings.size() != 2)
                         {
                             return cli.SetError("pbreak --print takes no arguments.");
                         }
@@ -2562,13 +2611,13 @@ namespace cli
                         return cli.DoPbreak('p', "");
 
                     default:
-                        if (argv.size() == 1)
+                        if (command_strings.size() == 1)
                         {
                             return cli.DoPbreak('p', "");
                         }
-                        else if (argv.size() == 2)
+                        else if (command_strings.size() == 2)
                         {
-                            return cli.DoPbreak('s', argv[1]);
+                            return cli.DoPbreak('s', command_strings[1]);
                         }
                         else
                         {
@@ -2600,10 +2649,11 @@ namespace cli
                 return "Syntax: popd";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // No arguments
-                if (argv.size() != 1)
+                if (command_strings.size() != 1)
                 {
                     return cli.SetError(GetSyntax());
                 }
@@ -2630,7 +2680,7 @@ namespace cli
                 return "Syntax: port";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoPort();
             }
@@ -2655,10 +2705,11 @@ namespace cli
                 return "Syntax: predict";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // No arguments to predict next operator
-                if (argv.size() != 1)
+                if (command_strings.size() != 1)
                 {
                     return cli.SetError("predict takes no arguments.");
                 }
@@ -2686,8 +2737,9 @@ namespace cli
                 return "Syntax: preferences [options] [identifier [attribute]]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2708,7 +2760,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2754,12 +2806,12 @@ namespace cli
                 if (opt.GetNonOptionArguments() == 2)
                 {
                     // id & attribute
-                    return cli.DoPreferences(detail, object, &argv[optind], &argv[optind + 1]);
+                    return cli.DoPreferences(detail, object, &command_strings[optind], &command_strings[optind + 1]);
                 }
                 if (opt.GetNonOptionArguments() == 1)
                 {
                     // id
-                    return cli.DoPreferences(detail, object, &argv[optind]);
+                    return cli.DoPreferences(detail, object, &command_strings[optind]);
                 }
 
                 return cli.DoPreferences(detail, object);
@@ -2785,8 +2837,9 @@ namespace cli
                 return "Syntax: print [options] [production_name]\nprint [options] identifier|timetag|pattern";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2816,7 +2869,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -2926,13 +2979,13 @@ namespace cli
                 }
 
                 std::string arg;
-                for (int i = opt.GetArgument() - opt.GetNonOptionArguments(); i < argv.size(); ++i)
+                for (int i = opt.GetArgument() - opt.GetNonOptionArguments(); i < command_strings.size(); ++i)
                 {
                     if (!arg.empty())
                     {
                         arg.push_back(' ');
                     }
-                    arg.append(argv[i]);
+                    arg.append(command_strings[i]);
                 }
                 return cli.DoPrint(options, depth, &arg);
             }
@@ -2957,8 +3010,9 @@ namespace cli
                 return "Syntax: production-find [-lrs[n|c]] pattern";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -2974,7 +3028,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3017,9 +3071,9 @@ namespace cli
                 }
 
                 std::string pattern;
-                for (unsigned i = opt.GetArgument() - opt.GetNonOptionArguments(); i < argv.size(); ++i)
+                for (unsigned i = opt.GetArgument() - opt.GetNonOptionArguments(); i < command_strings.size(); ++i)
                 {
-                    pattern += argv[i];
+                    pattern += command_strings[i];
                     pattern += ' ';
                 }
                 pattern = pattern.substr(0, pattern.length() - 1);
@@ -3047,18 +3101,19 @@ namespace cli
                 return "Syntax: pushd directory";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // Only takes one argument, the directory to change into
-                if (argv.size() < 2)
+                if (command_strings.size() < 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError("Expected on argument (directory). Enclose directory in quotes if there are spaces in the path.");
                 }
-                return cli.DoPushD(argv[1]);
+                return cli.DoPushD(command_strings[1]);
             }
 
         private:
@@ -3081,8 +3136,9 @@ namespace cli
                 return "Syntax: pwatch [-d|e] [production name]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3098,7 +3154,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3126,7 +3182,7 @@ namespace cli
 
                 if (opt.GetNonOptionArguments() == 1)
                 {
-                    return cli.DoPWatch(false, &argv[opt.GetArgument() - opt.GetNonOptionArguments()], setting);
+                    return cli.DoPWatch(false, &command_strings[opt.GetArgument() - opt.GetNonOptionArguments()], setting);
                 }
                 return cli.DoPWatch(query, 0);
             }
@@ -3151,10 +3207,11 @@ namespace cli
                 return "Syntax: pwd";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // No arguments to print working directory
-                if (argv.size() != 1)
+                if (command_strings.size() != 1)
                 {
                     return cli.SetError(GetSyntax());
                 }
@@ -3181,8 +3238,9 @@ namespace cli
                 return "Syntax: rand\nrand n\nrand --integer\nrand --integer n";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3194,7 +3252,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3219,7 +3277,7 @@ namespace cli
                 else if (opt.GetNonOptionArguments() == 1)
                 {
                     unsigned optind = opt.GetArgument() - opt.GetNonOptionArguments();
-                    return cli.DoRand(integer, &(argv[optind]));
+                    return cli.DoRand(integer, &(command_strings[optind]));
                 }
 
                 return cli.DoRand(integer, 0);
@@ -3245,20 +3303,21 @@ namespace cli
                 return "Syntax: remove-wme timetag";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // Exactly one argument
-                if (argv.size() < 2)
+                if (command_strings.size() < 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 uint64_t timetag = 0;
-                from_string(timetag, argv[1]);
+                from_string(timetag, command_strings[1]);
                 if (!timetag)
                 {
                     return cli.SetError("Timetag must be positive.");
@@ -3287,8 +3346,9 @@ namespace cli
                 return "Syntax: replay-input --open filename\nreplay-input [--query]\nreplay-input --close";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3303,7 +3363,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3352,8 +3412,9 @@ namespace cli
                     "Syntax: rete-net -s|l filename";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3369,7 +3430,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3428,8 +3489,9 @@ namespace cli
                 return "Syntax: rl [options parameter|statstic]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3444,7 +3506,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3476,7 +3538,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoRL(option, &(argv[2]));
+                        return cli.DoRL(option, &(command_strings[2]));
                     }
 
                     case 's':
@@ -3487,7 +3549,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoRL(option, &(argv[2]), &(argv[3]));
+                        return cli.DoRL(option, &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 't':
@@ -3504,10 +3566,10 @@ namespace cli
                         }
                         else if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoRL(option, &(argv[2]));
+                            return cli.DoRL(option, &(command_strings[2]));
                         }
 
-                        return cli.DoRL(option, &(argv[2]), &(argv[3]));
+                        return cli.DoRL(option, &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 'S':
@@ -3523,12 +3585,12 @@ namespace cli
                             return cli.DoRL(option);
                         }
 
-                        return cli.DoRL(option, &(argv[2]));
+                        return cli.DoRL(option, &(command_strings[2]));
                     }
                 }
 
                 // bad: no option, but more than one argument
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
                     return cli.SetError("Invalid syntax.");
                 }
@@ -3557,8 +3619,9 @@ namespace cli
                 return "Syntax: run  [-f|count]\nrun -[d|e|o|p][s][un][g] [f|count]\nrun -[d|e|o|p][un] count [-i e|p|d|o]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3579,7 +3642,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3640,7 +3703,7 @@ namespace cli
                 if (opt.GetNonOptionArguments() == 1)
                 {
                     int optind = opt.GetArgument() - opt.GetNonOptionArguments();
-                    if (!from_string(count, argv[optind]))
+                    if (!from_string(count, command_strings[optind]))
                     {
                         return cli.SetError("Integer count expected.");
                     }
@@ -3697,8 +3760,9 @@ namespace cli
                 return "Syntax: save-backtraces [-ed]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3714,7 +3778,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3763,17 +3827,18 @@ namespace cli
                 return "Syntax: select id";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // At most one argument to select the next operator
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                if (argv.size() == 2)
+                if (command_strings.size() == 2)
                 {
-                    return cli.DoSelect(&(argv[1]));
+                    return cli.DoSelect(&(command_strings[1]));
                 }
 
                 return cli.DoSelect();
@@ -3799,8 +3864,9 @@ namespace cli
                 return "Syntax: set-stop-phase -[ABadiop]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3820,7 +3886,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3889,8 +3955,9 @@ namespace cli
                 return "Syntax: smem [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -3917,7 +3984,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -3949,7 +4016,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoSMem(option, &(argv[2]));
+                        return cli.DoSMem(option, &(command_strings[2]));
 
                     case 'b':
                         // case: backup requires one non-option argument
@@ -3958,7 +4025,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoSMem(option, &(argv[2]));
+                        return cli.DoSMem(option, &(command_strings[2]));
 
                     case 'g':
                     {
@@ -3968,7 +4035,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoSMem(option, &(argv[2]));
+                        return cli.DoSMem(option, &(command_strings[2]));
                     }
 
                     case 'h':
@@ -3979,7 +4046,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), 0);
+                        return cli.DoSMem(option, &(command_strings[2]), 0);
                     }
 
                     case 'i':
@@ -4008,10 +4075,10 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoSMem(option, &(argv[2]), 0);
+                            return cli.DoSMem(option, &(command_strings[2]), 0);
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), &(argv[3]));
+                        return cli.DoSMem(option, &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 'q':
@@ -4024,10 +4091,10 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoSMem(option, &(argv[2]));
+                            return cli.DoSMem(option, &(command_strings[2]));
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), &(argv[3]));// This is the case of "depth".
+                        return cli.DoSMem(option, &(command_strings[2]), &(command_strings[3]));// This is the case of "depth".
                     }
 
                     case 'r':
@@ -4040,10 +4107,10 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoSMem(option, &(argv[2]));
+                            return cli.DoSMem(option, &(command_strings[2]));
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), &(argv[3]));//
+                        return cli.DoSMem(option, &(command_strings[2]), &(command_strings[3]));//
                     }
 
                     case 's':
@@ -4054,7 +4121,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), &(argv[3]));
+                        return cli.DoSMem(option, &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 'S':
@@ -4070,7 +4137,7 @@ namespace cli
                             return cli.DoSMem('S');
                         }
 
-                        return cli.DoSMem(option, &(argv[2]));
+                        return cli.DoSMem(option, &(command_strings[2]));
                     }
 
                     case 't':
@@ -4086,7 +4153,7 @@ namespace cli
                             return cli.DoSMem('t');
                         }
 
-                        return cli.DoSMem(option, &(argv[2]));
+                        return cli.DoSMem(option, &(command_strings[2]));
                     }
 
                     case 'v':
@@ -4104,15 +4171,15 @@ namespace cli
 
                         if (opt.GetNonOptionArguments() == 1)
                         {
-                            return cli.DoSMem(option, &(argv[2]), 0);
+                            return cli.DoSMem(option, &(command_strings[2]), 0);
                         }
 
-                        return cli.DoSMem(option, &(argv[2]), &(argv[3]));
+                        return cli.DoSMem(option, &(command_strings[2]), &(command_strings[3]));
                     }
                 }
 
                 // bad: no option, but more than one argument
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
                     return cli.SetError("Too many arguments.");
                 }
@@ -4141,7 +4208,7 @@ namespace cli
                 return "Syntax: soarnews";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoSoarNews();
             }
@@ -4167,8 +4234,9 @@ namespace cli
                     "Syntax: source [options] filename";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4182,7 +4250,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4215,7 +4283,7 @@ namespace cli
                     return cli.SetError("Please supply one file to source. If there are spaces in the path, enclose it in quotes.");
                 }
 
-                return cli.DoSource(argv[opt.GetArgument() - opt.GetNonOptionArguments()], &options);
+                return cli.DoSource(command_strings[opt.GetArgument() - opt.GetNonOptionArguments()], &options);
             }
 
         private:
@@ -4239,19 +4307,20 @@ namespace cli
                     "Syntax: sp {production_body}";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 // One argument (the stuff in the brackets, minus the brackets
-                if (argv.size() < 2)
+                if (command_strings.size() < 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
-                return cli.DoSP(argv[1]);
+                return cli.DoSP(command_strings[1]);
             }
 
         private:
@@ -4275,20 +4344,21 @@ namespace cli
                     "Syntax: srand [seed]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                if (argv.size() < 2)
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                if (command_strings.size() < 2)
                 {
                     return cli.DoSRand();
                 }
 
-                if (argv.size() > 2)
+                if (command_strings.size() > 2)
                 {
                     return cli.SetError(GetSyntax());
                 }
 
                 uint32_t seed = 0;
-                sscanf(argv[1].c_str(), "%u", &seed);
+                sscanf(command_strings[1].c_str(), "%u", &seed);
                 return cli.DoSRand(&seed);
             }
 
@@ -4313,8 +4383,9 @@ namespace cli
                     "Syntax: stats [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4338,7 +4409,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4423,8 +4494,9 @@ namespace cli
                     "Syntax: stop-soar [-s] [reason string]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4436,7 +4508,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4459,9 +4531,9 @@ namespace cli
                 {
                     std::string reasonForStopping;
                     unsigned int optind = opt.GetArgument() - opt.GetNonOptionArguments();
-                    while (optind < argv.size())
+                    while (optind < command_strings.size())
                     {
-                        reasonForStopping += argv[optind++] + ' ';
+                        reasonForStopping += command_strings[optind++] + ' ';
                     }
                     return cli.DoStopSoar(self, &reasonForStopping);
                 }
@@ -4488,7 +4560,7 @@ namespace cli
                 return "Syntax: time command [arguments]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
                 // There must at least be a command
                 if (argv.size() < 2)
@@ -4496,8 +4568,7 @@ namespace cli
                     return cli.SetError(GetSyntax());
                 }
 
-                std::vector<std::string>::iterator iter = argv.begin();
-                argv.erase(iter);
+                argv.erase(argv.begin());
 
                 return cli.DoTime(argv);
             }
@@ -4522,8 +4593,9 @@ namespace cli
                 return "Syntax: timers [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4539,7 +4611,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4591,7 +4663,7 @@ namespace cli
                 return "Syntax: unalias name";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
                 // Need exactly one argument
                 if (argv.size() < 2)
@@ -4627,8 +4699,9 @@ namespace cli
                 return "Syntax: verbose [-ed]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4644,7 +4717,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4695,7 +4768,7 @@ namespace cli
                 return "Syntax: version";
             }
 
-            virtual bool Parse(std::vector< std::string >&)
+            virtual bool Parse(std::vector< soar::Token >&)
             {
                 return cli.DoVersion();
             }
@@ -4720,8 +4793,9 @@ namespace cli
                 return "Syntax: waitsnc -[e|d]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4737,7 +4811,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4790,8 +4864,9 @@ namespace cli
                     "Syntax: warnings [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4807,7 +4882,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -4858,8 +4933,9 @@ namespace cli
                 return "Syntax: watch [options]\nwatch [level]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -4897,7 +4973,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError());
                     }
@@ -5263,7 +5339,7 @@ namespace cli
                 {
                     int optind = opt.GetArgument() - opt.GetNonOptionArguments();
                     int level = 0;
-                    if (!from_string(level, argv[optind]))
+                    if (!from_string(level, command_strings[optind]))
                     {
                         return cli.SetError("Integer argument expected.");
                     }
@@ -5398,8 +5474,9 @@ namespace cli
                 return "Syntax: watch-wmes -[a|r]  -t type  pattern\nwatch-wmes -[l|R] [-t type]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -5416,7 +5493,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -5484,7 +5561,7 @@ namespace cli
                     }
 
                     int optind = opt.GetArgument() - opt.GetNonOptionArguments();
-                    return cli.DoWatchWMEs(mode, type, &argv[optind], &argv[optind + 1], &argv[optind + 2]);
+                    return cli.DoWatchWMEs(mode, type, &command_strings[optind], &command_strings[optind + 1], &command_strings[optind + 2]);
                 }
 
                 // no additional arguments
@@ -5516,8 +5593,9 @@ namespace cli
                 return "Syntax: wma [options]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
                 cli::Options opt;
                 OptionsData optionsData[] =
                 {
@@ -5533,7 +5611,7 @@ namespace cli
 
                 for (;;)
                 {
-                    if (!opt.ProcessOptions(argv, optionsData))
+                    if (!opt.ProcessOptions(command_strings, optionsData))
                     {
                         return cli.SetError(opt.GetError().c_str());
                     }
@@ -5566,7 +5644,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoWMA(option, &(argv[2]));
+                        return cli.DoWMA(option, &(command_strings[2]));
                     }
 
                     case 'h':
@@ -5577,7 +5655,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoWMA(option, &(argv[2]));
+                        return cli.DoWMA(option, &(command_strings[2]));
                     }
 
                     case 's':
@@ -5588,7 +5666,7 @@ namespace cli
                             return cli.SetError(opt.GetError().c_str());
                         }
 
-                        return cli.DoWMA(option, &(argv[2]), &(argv[3]));
+                        return cli.DoWMA(option, &(command_strings[2]), &(command_strings[3]));
                     }
 
                     case 'S':
@@ -5604,7 +5682,7 @@ namespace cli
                             return cli.DoWMA('S');
                         }
 
-                        return cli.DoWMA(option, &(argv[2]));
+                        return cli.DoWMA(option, &(command_strings[2]));
                     }
 
                     case 't':
@@ -5620,12 +5698,12 @@ namespace cli
                             return cli.DoWMA(option);
                         }
 
-                        return cli.DoWMA(option, &(argv[2]));
+                        return cli.DoWMA(option, &(command_strings[2]));
                     }
                 }
 
                 // bad: no option, but more than one argument
-                if (argv.size() > 1)
+                if (command_strings.size() > 1)
                 {
                     return cli.SetError("Too many args.");
                 }
@@ -5656,9 +5734,10 @@ namespace cli
                        "        svs [--enable | -e | --on | --disable | -d | --off]";
             }
 
-            virtual bool Parse(std::vector< std::string >& argv)
+            virtual bool Parse(std::vector< soar::Token >& argv)
             {
-                return cli.DoSVS(argv);
+                std::vector< std::string > command_strings = tokens_to_strings(argv);
+                return cli.DoSVS(command_strings);
             }
 
         private:

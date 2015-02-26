@@ -27,6 +27,7 @@
 #include "cli_Parser.h"
 #include "Export.h"
 #include "lexer.h"
+#include "token.h"
 
 namespace soar_module
 {
@@ -115,14 +116,14 @@ namespace cli
             bool XMLMoveCurrentToLastChild() ;
 
             virtual bool DoAddWME(const std::string& id, std::string attribute, const std::string& value, bool acceptable);
-            virtual bool DoAlias(std::vector< std::string >* argv = 0);
+            virtual bool DoAlias(std::vector< soar::Token >* argv = 0);
             virtual bool DoAllocate(const std::string& pool, int blocks);
             virtual bool DoCaptureInput(eCaptureInputMode mode, bool autoflush = false, std::string* pathname = 0);
             virtual bool DoCD(const std::string* pDirectory = 0);
             virtual bool DoChunkNameFormat(const chunkNameFormats* pLongFormat = 0, const int64_t* pCount = 0, const std::string* pPrefix = 0);
             virtual bool DoCLIMessage(const std::string& pMessage);
             virtual bool DoCLog(const eLogMode mode = LOG_QUERY, const std::string* pFilename = 0, const std::string* pToAdd = 0, bool silent = false);
-            virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< std::string >& argv);
+            virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< soar::Token >& argv);
             virtual bool DoDebug(std::vector< std::string >* argv = 0);
             virtual bool DoDefaultWMEDepth(const int* pDepth);
             virtual bool DoDirs();
@@ -180,9 +181,9 @@ namespace cli
             virtual bool DoSRand(uint32_t* pSeed = 0);
             virtual bool DoStats(const StatsBitset& options, int sort = 0);
             virtual bool DoStopSoar(bool self, const std::string* reasonForStopping = 0);
-            virtual bool DoTime(std::vector<std::string>& argv);
+            virtual bool DoTime(std::vector<soar::Token>& argv);
             virtual bool DoTimers(bool* pSetting = 0);
-            virtual bool DoUnalias(std::vector<std::string>& argv);
+            virtual bool DoUnalias(std::vector<soar::Token>& argv);
             virtual bool DoVerbose(bool* pSetting = 0);
             virtual bool DoVersion();
             virtual bool DoWaitSNC(bool* pSetting = 0);

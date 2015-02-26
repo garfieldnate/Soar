@@ -3,6 +3,7 @@
 
 #include "cli_Commands.h"
 #include "cli_Parser.h"
+#include "token.h"
 
 class CliAdapter : public cli::Cli
 {
@@ -17,7 +18,7 @@ class CliAdapter : public cli::Cli
         {
             return false;
         }
-        virtual bool DoAlias(std::vector< std::string >* argv = 0)
+        virtual bool DoAlias(std::vector< soar::Token >* argv = 0)
         {
             return false;
         }
@@ -45,7 +46,7 @@ class CliAdapter : public cli::Cli
         {
             return false;
         }
-        virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< std::string >& argv)
+        virtual bool DoCommandToFile(const eLogMode mode, const std::string& filename, std::vector< soar::Token >& argv)
         {
             return false;
         }
@@ -281,7 +282,7 @@ class CliAdapter : public cli::Cli
         {
             return false;
         }
-        virtual bool DoTime(std::vector<std::string>& argv)
+        virtual bool DoTime(std::vector<soar::Token>& argv)
         {
             return false;
         }
@@ -289,7 +290,7 @@ class CliAdapter : public cli::Cli
         {
             return false;
         }
-        virtual bool DoUnalias(std::vector<std::string>& argv)
+        virtual bool DoUnalias(std::vector<soar::Token>& argv)
         {
             return false;
         }

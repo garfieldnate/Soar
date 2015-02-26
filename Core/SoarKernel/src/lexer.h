@@ -170,6 +170,10 @@ namespace soar
          * The second-to-last character read from the input string.
          */
         int                 prev_char;
+        /**
+         * Reads the input production one character at a time, keeping track
+         * of line and column numbers.
+         */
         indexed_input_buffer indexed_input;
         //0 means top level, no left parens seen
         int                 parentheses_level;

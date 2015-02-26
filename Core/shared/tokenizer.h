@@ -15,6 +15,10 @@
 #include <string>
 #include <vector>
 #include "indexed_input_buffer.h"
+#include "text_location.h"
+#include "token.h"
+using std::string;
+using std::vector;
 
 /**
  * Define PRINT_CALLBACKS to enable dumping of callback argvs to stdout before
@@ -50,7 +54,7 @@ namespace soar
              *         Returning false will stop parsing and cause
              *         tokenizer::evaluate to return false.
              */
-            virtual bool handle_command(std::vector<std::string>& argv) = 0;
+            virtual bool handle_command(vector< Token >& argv) = 0;
     };
 
     /**
@@ -176,7 +180,7 @@ namespace soar
             tokenizer_callback* callback;   ///< The current argv callback (only one).
             int command_start_line;         ///< The line that the first word is on.
             const char* error;              ///< Error message.
-            std::string last_arg;           ///< Last valid command processed
+            Token last_arg;                 ///< Last valid command processed
 
         public:
             tokenizer()
@@ -260,7 +264,7 @@ namespace soar
              */
             void parse_command()
             {
-                std::vector< std::string > argv;
+                vector< Token > argv;
                 skip_whitespace_and_comments();
                 while (parse_word(argv))
                 {
@@ -289,41 +293,41 @@ namespace soar
                 {
                     // TODO: explain this block. What is it for?
                     // Why ignore echoresult?
-                    if (((last_arg == "sp") && (argv[0] != "sp")) || ((last_arg == "gp") && (argv[0] != "gp")))
-                    {
-                        const char* echo_args[] = {"echo", " "};
-                        std::vector<std::string> echo_command(echo_args, echo_args + sizeof(echo_args) / sizeof(echo_args[0]));
-                        bool echoresult = callback->handle_command(echo_command);
-                    }
+                    //TODO: need to uncomment this, unless it turns out to be useless
+                    // if (((last_arg == "sp") && (argv[0] != "sp")) || ((last_arg == "gp") && (argv[0] != "gp")))
+                    // {
+                    //     const char* echo_args[] = {"echo", " "};
+                    //     vector<string> echo_command(echo_args, echo_args + sizeof(echo_args) / sizeof(echo_args[0]));
+                    //     bool echoresult = callback->handle_command(echo_command);
+                    // }
                     if (!callback->handle_command(argv))
                     {
                         current.invalidate();
                     }
                     else
                     {
-                        last_arg.assign(argv[0]);
+                        last_arg = argv[0];
                     }
                 }
             }
 
             /**
              * Parse the next word, return false when a command separator is
-             * encountered.
+             * encountered. Place the word into argv.
              * @return false if a command separator is encountered.
              */
-            bool parse_word(std::vector< std::string >& argv)
+            bool parse_word(vector< Token >& argv)
             {
                 if (current.eof())
                 {
                     return false;
                 }
 
-                std::string word;
+                string word;
                 if (argv.empty())
                 {
                     command_start_line = current.get_line();
                 }
-
                 switch (current.get())
                 {
                     case ';':
@@ -334,18 +338,15 @@ namespace soar
                         break;
 
                     case '"':
-                        argv.push_back(word);
-                        read_quoted_string(argv);
+                        argv.push_back(read_quoted_string());
                         break;
 
                     case '{':
-                        argv.push_back(word);
-                        read_braces(argv);
+                        argv.push_back(read_braces());
                         break;
 
                     default:
-                        argv.push_back(word);
-                        read_normal_word(argv);
+                        argv.push_back(read_normal_word());
                         break;
                 }
 
@@ -353,10 +354,14 @@ namespace soar
             }
 
             /**
-             * Store a word that doesn't start with { or " in to argv.back().
+             * Store characters for a word that doesn't start
+             * with { or " into word.
              */
-            void read_normal_word(std::vector< std::string >& argv)
+            Token read_normal_word()
             {
+                text_location start = current.get_location();
+                text_location last_location;
+                string word;
                 do
                 {
                     char c = current.get();
@@ -366,25 +371,26 @@ namespace soar
                             c = parse_escape_sequence();
                             if (current.bad())
                             {
-                                return;
+                                return Token(start, current.get_location(), word);
                             }
                             break;
 
                         case ';':
-                            return;
+                            return Token(start, last_location, word);
 
                         case '#':
                             skip_to_end_of_line();
-                            return;
+                            return Token(start, last_location, word);;
 
                         default:
+                            last_location = current.get_location();
                             current.increment();
                             break;
                     }
-
-                    argv.back().push_back(c);
+                    word.push_back(c);
                 }
                 while (!current.eof() && !isspace(current.get()));
+                return Token(start, last_location, word);
             }
 
             /**
@@ -419,10 +425,11 @@ namespace soar
             /**
              * Read a word started with a double quote character.
              */
-            void read_quoted_string(std::vector< std::string >& argv)
+            Token read_quoted_string()
             {
                 current.increment(); // consume "
-
+                text_location start = current.get_location();
+                string word;
                 while (current.get() != '"')
                 {
                     switch (current.get())
@@ -430,31 +437,32 @@ namespace soar
                         case 0:
                             error = "unexpected eof";
                             current.invalidate();
-                            return;
+                            return Token(start, current.get_location(), word);
 
                         case '\\':
                         {
                             char c = parse_escape_sequence();
                             if (current.bad())
                             {
-                                return;
+                                return Token(start, current.get_location(), word);
                             }
-                            argv.back().push_back(c);
+                            word.push_back(c);
                         }
                         break;
 
                         default:
-                            argv.back().push_back(current.get());
+                            word.push_back(current.get());
                             current.increment();
                             break;
                     }
                 }
-
+                Token t = Token(start, current.get_location(), word);
                 current.increment(); // consume "
+                return t;
             }
 
             /**
-             * The current character is a backslash, return the next character
+             * The current character is a backslash, return the next character,
              * converting it if necessary.  Special codes become new characters
              * here and are returned as them. Braces and quotes lose special
              * meaning when inside of an escape sequence.
@@ -463,7 +471,7 @@ namespace soar
             {
                 current.increment(); // consume backslash
 
-                // future work? newline, octal, hex, wide hex
+                // TODO: future work? newline, octal, hex, wide hex
 
                 char ret = 0;
                 bool increment = true;
@@ -514,11 +522,15 @@ namespace soar
              * Read a word enclosed in braces. Brace levels must match unless
              * braces are escaped.
              */
-            void read_braces(std::vector< std::string >& argv)
+            Token read_braces()
             {
                 current.increment(); // consume brace;
+                text_location start = current.get_location();
                 int depth = 1;
                 bool literal = false;
+                string word;
+                text_location last_location;
+                bool beginning = true;
                 while (depth)
                 {
                     char c = current.get();
@@ -526,28 +538,35 @@ namespace soar
                     {
                         error = "unexpected eof, unmatched opening brace";
                         current.invalidate();
-                        return;
+                        return Token(start, current.get_location(), word);
                     }
+                    last_location = current.get_location();
                     current.increment();
                     if (c == '\\')
                     {
                         // special case for backslash-newline substitution
                         if (current.get() == '\n')
                         {
-                            argv.back().push_back(' ');
+                            word.push_back(' ');
                             skip_whitespace();
                         }
                         else
                         {
                             // current is escaped but no substitution
-                            argv.back().push_back('\\');
-                            argv.back().push_back(current.get());
+                            word.push_back('\\');
+                            word.push_back(current.get());
                             current.increment();
                         }
                     }
                     else if (c == '#' && !literal)
                     {
                         skip_to_end_of_line();
+                        // if there's a comment at the beginning, then adjust
+                        // the start location because we skip comments
+                        if (beginning)
+                        {
+                            start = current.get_location();
+                        }
                     }
                     else
                     {
@@ -561,22 +580,23 @@ namespace soar
                             {
                                 if (--depth == 0)  // don't include final }
                                 {
-                                    return;
+                                    return Token(start, last_location, word);
                                 }
                             }
                         }
-                        argv.back().push_back(c);
+                        word.push_back(c);
                     }
                     if (c == '|')
                     {
                         literal = !literal;
                     }
+                    beginning = false;
                 }
+                return Token(start, last_location, word);
             }
 
             /**
-             * Skip whitespace and a comment (to the end of the line) if a pound
-             * sign is encountered.
+             * Skip whitespace and end of line comments (which are indicated with a pound sign).
              */
             void skip_whitespace_and_comments()
             {

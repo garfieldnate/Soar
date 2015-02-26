@@ -3,6 +3,7 @@
 #include "unittest.h"
 
 #include "tokenizer.h"
+#include "token.h"
 #include <stdarg.h>
 #include <queue>
 
@@ -12,7 +13,7 @@ struct CallData
         : input(input)
     {
     }
-    
+
     CallData(const char* input, int expected, ...)
         : input(input)
     {
@@ -24,10 +25,10 @@ struct CallData
             argv.push_back(va_arg(args, const char*));
         }
         va_end(args);
-        
+
         q.push(argv);
     }
-    
+
     void addResult(int expected, ...)
     {
         va_list args;
@@ -40,7 +41,7 @@ struct CallData
         va_end(args);
         q.push(argv);
     }
-    
+
     const char* input;
     std::queue< std::vector<std::string> > q;
 };
@@ -99,17 +100,17 @@ class TokenizerTest : public CPPUNIT_NS::TestCase, public soar::tokenizer_callba
         CPPUNIT_TEST(testTokenizer48);
 #endif
         CPPUNIT_TEST_SUITE_END();
-        
+
     public:
         TokenizerTest()
             : cd(0)
         {}
         virtual ~TokenizerTest() {}
-        virtual bool handle_command(std::vector<std::string>& argv);
-        
+        virtual bool handle_command(std::vector<soar::Token>& argv);
+
         void setUp();       // Called before each function outlined by CPPUNIT_TEST
         void tearDown();    // Called after each function outlined by CPPUNIT_TEST
-        
+
     protected:
         void testTokenizer01();
         void testTokenizer02();
@@ -159,9 +160,9 @@ class TokenizerTest : public CPPUNIT_NS::TestCase, public soar::tokenizer_callba
         void testTokenizer46();
         void testTokenizer47();
         void testTokenizer48();
-        
+
         void evaluate(CallData& cd);
-        
+
         soar::tokenizer* tokenizer;
         CallData* cd;
 };
@@ -179,12 +180,12 @@ void TokenizerTest::tearDown()
     delete tokenizer;
 }
 
-bool TokenizerTest::handle_command(std::vector<std::string>& argv)
+bool TokenizerTest::handle_command(std::vector<soar::Token>& argv)
 {
     CPPUNIT_ASSERT_MESSAGE(cd->input, argv.size() == cd->q.front().size());
     for (std::vector<std::string>::size_type i = 0; i < argv.size(); i++)
     {
-        CPPUNIT_ASSERT(argv[i] == cd->q.front()[i]);
+        CPPUNIT_ASSERT(argv[i].get_string() == cd->q.front()[i]);
     }
     cd->q.pop();
     return true;

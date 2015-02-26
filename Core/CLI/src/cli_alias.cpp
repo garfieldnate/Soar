@@ -4,11 +4,12 @@
 #include "sml_Utils.h"
 #include "cli_Aliases.h"
 #include "sml_Names.h"
+#include "token.h"
 
 using namespace cli;
 using namespace sml;
 
-bool CommandLineInterface::DoAlias(std::vector< std::string >* argv)
+bool CommandLineInterface::DoAlias(std::vector< soar::Token >* argv)
 {
     if (!argv || argv->size() == 1)
     {
@@ -18,10 +19,10 @@ bool CommandLineInterface::DoAlias(std::vector< std::string >* argv)
             m_Result << "No aliases found.";
             return true;
         }
-        
+
         while (iter != m_Parser.GetAliases().End())
         {
-            if (!argv || argv->front() == iter->first)
+            if (!argv || argv->front().get_string() == iter->first)
             {
                 std::string expansion;
                 for (std::vector<std::string>::const_iterator j = iter->second.begin(); j != iter->second.end(); ++j)
@@ -30,7 +31,7 @@ bool CommandLineInterface::DoAlias(std::vector< std::string >* argv)
                     expansion += ' ';
                 }
                 expansion = expansion.substr(0, expansion.length() - 1);
-                
+
                 if (m_RawOutput)
                 {
                     m_Result << iter->first << "=" << expansion << "\n";
@@ -40,7 +41,7 @@ bool CommandLineInterface::DoAlias(std::vector< std::string >* argv)
                     AppendArgTagFast(sml_Names::kParamAlias, sml_Names::kTypeString, iter->first);
                     AppendArgTagFast(sml_Names::kParamAliasedCommand, sml_Names::kTypeString, expansion);
                 }
-                
+
                 if (argv)
                 {
                     return true;
@@ -50,7 +51,7 @@ bool CommandLineInterface::DoAlias(std::vector< std::string >* argv)
         }
         return true;
     }
-    
+
     m_Parser.GetAliases().SetAlias(*argv);
     return true;
 }

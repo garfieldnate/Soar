@@ -9,6 +9,8 @@
 #include "portability.h"
 
 #include "cli_CommandLineInterface.h"
+#include "text_location.h"
+#include "token.h"
 
 #include <time.h>
 
@@ -20,20 +22,20 @@
 using namespace cli;
 using namespace sml;
 
-bool CommandLineInterface::DoTime(std::vector<std::string>& argv)
+bool CommandLineInterface::DoTime(std::vector<soar::Token>& argv)
 {
 
     soar_timer timer;
-    
+
     timer.start();
-    
+
     // Execute command
     bool ret = m_Parser.handle_command(argv);
-    
+
     timer.stop();
-    
+
     double elapsed = timer.get_usec() / 1000000.0;
-    
+
     // Print elapsed time and return
     if (m_RawOutput)
     {

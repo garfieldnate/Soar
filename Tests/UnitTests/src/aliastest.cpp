@@ -53,14 +53,24 @@ void AliasTest::tearDown()
     delete aliases;
 }
 
+/**
+ * @brief Create a token with 0:0 start/end locations
+ * @details A shorthand way to create a token when we don't have any proper
+ * start/end locations.
+ */
+soar::Token get_token(std::string string)
+{
+    return soar::Token(text_location(), text_location(), string);
+}
+
 void AliasTest::testOne()
 {
     std::vector< soar::Token > a;
-    a.push_back(soar::Token(text_location(), text_location(), "alias"));
-    a.push_back(soar::Token(text_location(), text_location(), "1"));
+    a.push_back(get_token("alias"));
+    a.push_back(get_token("1"));
     aliases->SetAlias(a);
     std::vector< soar::Token > b;
-    b.push_back(soar::Token(text_location(), text_location(), "alias"));
+    b.push_back(get_token("alias"));
     CPPUNIT_ASSERT(aliases->Expand(b));
     CPPUNIT_ASSERT(b.size() == 1);
     CPPUNIT_ASSERT(b[0].get_string() == "1");
@@ -69,12 +79,12 @@ void AliasTest::testOne()
 void AliasTest::testTwo()
 {
     std::vector< soar::Token > a;
-    a.push_back(soar::Token(text_location(), text_location(), "alias"));
-    a.push_back(soar::Token(text_location(), text_location(), "1"));
-    a.push_back(soar::Token(text_location(), text_location(), "2"));
+    a.push_back(get_token("alias"));
+    a.push_back(get_token("1"));
+    a.push_back(get_token("2"));
     aliases->SetAlias(a);
     std::vector< soar::Token > b;
-    b.push_back(soar::Token(text_location(), text_location(), "alias"));
+    b.push_back(get_token("alias"));
     CPPUNIT_ASSERT(aliases->Expand(b));
     CPPUNIT_ASSERT(b.size() == 2);
     CPPUNIT_ASSERT(b[0].get_string() == "1");
@@ -84,13 +94,13 @@ void AliasTest::testTwo()
 void AliasTest::testThree()
 {
     std::vector< soar::Token > a;
-    a.push_back(soar::Token(text_location(), text_location(), "alias"));
-    a.push_back(soar::Token(text_location(), text_location(), "1"));
-    a.push_back(soar::Token(text_location(), text_location(), "2"));
-    a.push_back(soar::Token(text_location(), text_location(), "3"));
+    a.push_back(get_token("alias"));
+    a.push_back(get_token("1"));
+    a.push_back(get_token("2"));
+    a.push_back(get_token("3"));
     aliases->SetAlias(a);
     std::vector< soar::Token > b;
-    b.push_back(soar::Token(text_location(), text_location(), "alias"));
+    b.push_back(get_token("alias"));
     CPPUNIT_ASSERT(aliases->Expand(b));
     CPPUNIT_ASSERT(b.size() == 3);
     CPPUNIT_ASSERT(b[0].get_string() == "1");
@@ -101,10 +111,10 @@ void AliasTest::testThree()
 void AliasTest::testRemove()
 {
     std::vector< soar::Token > a;
-    a.push_back(soar::Token(text_location(), text_location(), "p"));
+    a.push_back(get_token("p"));
     aliases->SetAlias(a);
     std::vector< soar::Token > b;
-    b.push_back(soar::Token(text_location(), text_location(), "p"));
+    b.push_back(get_token("p"));
     CPPUNIT_ASSERT(!aliases->Expand(b));
     CPPUNIT_ASSERT(b.size() == 1);
     CPPUNIT_ASSERT(b[0].get_string() == "p");
@@ -115,25 +125,25 @@ void AliasTest::testDefaults()
 {
     // Test for some really common defaults that should never go away
     std::vector< soar::Token > p;
-    p.push_back(soar::Token(text_location(), text_location(), "p"));
+    p.push_back(get_token("p"));
     CPPUNIT_ASSERT(aliases->Expand(p));
     CPPUNIT_ASSERT(p.size() == 1);
     CPPUNIT_ASSERT(p.front().get_string() == "print");
 
     std::vector< soar::Token > q;
-    q.push_back(soar::Token(text_location(), text_location(), "?"));
+    q.push_back(get_token("?"));
     CPPUNIT_ASSERT(aliases->Expand(q));
     CPPUNIT_ASSERT(q.size() == 1);
     CPPUNIT_ASSERT(q.front().get_string() == "help");
 
     std::vector< soar::Token > init;
-    init.push_back(soar::Token(text_location(), text_location(), "init"));
+    init.push_back(get_token("init"));
     CPPUNIT_ASSERT(aliases->Expand(init));
     CPPUNIT_ASSERT(init.size() == 1);
     CPPUNIT_ASSERT(init.front().get_string() == "init-soar");
 
     std::vector< soar::Token > varprint;
-    varprint.push_back(soar::Token(text_location(), text_location(), "varprint"));
+    varprint.push_back(get_token("varprint"));
     CPPUNIT_ASSERT(aliases->Expand(varprint));
     CPPUNIT_ASSERT(varprint.size() == 4);
     CPPUNIT_ASSERT(varprint[0].get_string() == "print");
@@ -142,40 +152,40 @@ void AliasTest::testDefaults()
     CPPUNIT_ASSERT(varprint[3].get_string() == "100");
 
     std::vector< soar::Token > step;
-    step.push_back(soar::Token(text_location(), text_location(), "step"));
+    step.push_back(get_token("step"));
     CPPUNIT_ASSERT(aliases->Expand(step));
     CPPUNIT_ASSERT(step.size() == 2);
     CPPUNIT_ASSERT(step[0].get_string() == "run");
     CPPUNIT_ASSERT(step[1].get_string() == "-d");
 
     std::vector< soar::Token > d;
-    d.push_back(soar::Token(text_location(), text_location(), "d"));
+    d.push_back(get_token("d"));
     CPPUNIT_ASSERT(aliases->Expand(d));
     CPPUNIT_ASSERT(d.size() == 2);
     CPPUNIT_ASSERT(d[0].get_string() == "run");
     CPPUNIT_ASSERT(d[1].get_string() == "-d");
 
     std::vector< soar::Token > e;
-    e.push_back(soar::Token(text_location(), text_location(), "e"));
+    e.push_back(get_token("e"));
     CPPUNIT_ASSERT(aliases->Expand(e));
     CPPUNIT_ASSERT(e.size() == 2);
     CPPUNIT_ASSERT(e[0].get_string() == "run");
     CPPUNIT_ASSERT(e[1].get_string() == "-e");
 
     std::vector< soar::Token > stop;
-    stop.push_back(soar::Token(text_location(), text_location(), "stop"));
+    stop.push_back(get_token("stop"));
     CPPUNIT_ASSERT(aliases->Expand(stop));
     CPPUNIT_ASSERT(stop.size() == 1);
     CPPUNIT_ASSERT(stop.front().get_string() == "stop-soar");
 
     std::vector< soar::Token > interrupt;
-    interrupt.push_back(soar::Token(text_location(), text_location(), "interrupt"));
+    interrupt.push_back(get_token("interrupt"));
     CPPUNIT_ASSERT(aliases->Expand(interrupt));
     CPPUNIT_ASSERT(interrupt.size() == 1);
     CPPUNIT_ASSERT(interrupt.front().get_string() == "stop-soar");
 
     std::vector< soar::Token > w;
-    w.push_back(soar::Token(text_location(), text_location(), "w"));
+    w.push_back(get_token("w"));
     CPPUNIT_ASSERT(aliases->Expand(w));
     CPPUNIT_ASSERT(w.size() == 1);
     CPPUNIT_ASSERT(w.front().get_string() == "watch");
